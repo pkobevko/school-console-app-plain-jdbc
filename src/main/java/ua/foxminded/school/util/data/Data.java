@@ -63,8 +63,8 @@ public class Data {
         List<Student> studentsTemp = new ArrayList<>(students);
         for (Group group : groups) {
             int studentsCount = getRandomStudentsCount();
-            for (int i = 0; i < studentsCount; i++) {
-                if (studentsCount < studentsTemp.size()) {
+            if (studentsCount < studentsTemp.size()) {
+                for (int i = 0; i < studentsCount; i++) {
                     Student student = getRandomStudent(studentsTemp);
                     assignStudentToGroup(student, group);
                     studentsTemp.remove(student);

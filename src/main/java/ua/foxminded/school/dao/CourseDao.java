@@ -6,7 +6,9 @@ import ua.foxminded.school.domain.model.Course;
 import ua.foxminded.school.exception.DaoOperationException;
 
 public interface CourseDao {
-    void insert(List<Course> courses) throws DaoOperationException;
+    void saveAll(List<Course> courses) throws DaoOperationException;
 
-    void save(Course course) throws DaoOperationException;
+    List<Course> findAll() throws DaoOperationException;
+
+    List<Course> findAllByStudentId(int studentId) throws DaoOperationException;
 }

@@ -6,7 +6,7 @@ import ua.foxminded.school.domain.model.Group;
 import ua.foxminded.school.exception.DaoOperationException;
 
 public interface GroupDao {
-    void insert(List<Group> groups) throws DaoOperationException;
+    void saveAll(List<Group> groups) throws DaoOperationException;
 
-    void save(Group group) throws DaoOperationException;
+    List<Group> findAllByStudentsCount(int studentCount) throws DaoOperationException;
 }

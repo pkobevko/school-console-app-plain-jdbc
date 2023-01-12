@@ -16,8 +16,8 @@ public class SchoolConsoleApp {
         try {
             schoolDbInitializer.init();
 
-            Data data = new Data();
-            JdbcUtil.insertDataInDatabase(data, dataSource);
+            Data testData = new Data();
+            JdbcUtil.insertTestDataInDatabase(testData, dataSource);
 
             UserInterface userInterface = new UserInterface(dataSource);
             userInterface.run();

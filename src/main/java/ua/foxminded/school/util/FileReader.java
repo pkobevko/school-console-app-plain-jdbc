@@ -13,10 +13,12 @@ import java.util.stream.Stream;
 import ua.foxminded.school.exception.FileReaderException;
 
 public class FileReader {
+    private static final String LINE_SEPARATOR = "\n";
+    
     public static String readWholeFileFromResources(String fileName) throws FileReaderException {
         Path filePath = createPathFromFileName(fileName);
         try (Stream<String> fileLinesStream = openFileLinesStream(filePath)) {
-            return fileLinesStream.collect(Collectors.joining("\n"));
+            return fileLinesStream.collect(Collectors.joining(LINE_SEPARATOR));
         }
     }
 

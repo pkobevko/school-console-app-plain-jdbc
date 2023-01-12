@@ -41,23 +41,23 @@ public class JdbcUtil {
         return dataSource;
     }
 
-    public static void insertDataInDatabase(Data data, DataSource dataSource) throws DaoOperationException {
+    public static void insertTestDataInDatabase(Data data, DataSource dataSource) throws DaoOperationException {
         try {
             List<Group> groups = data.getGroups();
             GroupDao groupDao = new GroupDaoImpl(dataSource);
-            groupDao.insert(groups);
+            groupDao.saveAll(groups);
 
             List<Course> courses = data.getCourses();
             CourseDao courseDao = new CourseDaoImpl(dataSource);
-            courseDao.insert(courses);
+            courseDao.saveAll(courses);
 
             List<Student> students = data.getStudents(groups);
             Map<Student, List<Course>> studentsCourses = data.getStudentsCourses(students, courses);
             StudentDao studentDao = new StudentDaoImpl(dataSource);
-            studentDao.insert(students);
+            studentDao.saveAll(students);
             studentDao.assignToCourses(studentsCourses);
         } catch (DaoOperationException e) {
-            throw new DaoOperationException("Cannot insert data to database", e);
+            throw new DaoOperationException("Error inserting data in database:" + e.getMessage(), e);
         }
     }
 }

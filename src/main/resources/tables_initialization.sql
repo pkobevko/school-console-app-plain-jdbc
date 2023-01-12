@@ -32,6 +32,6 @@ CREATE TABLE students_courses (
     student_id INT NOT NULL,
     course_id INT NOT NULL,
     CONSTRAINT PK_students_courses PRIMARY KEY (student_id, course_id),
-    CONSTRAINT FK_students_courses_students FOREIGN KEY (student_id) REFERENCES students (id),
-    CONSTRAINT FK_students_courses_course_id FOREIGN KEY (course_id) REFERENCES courses (id)
+    CONSTRAINT FK_students_courses_students FOREIGN KEY (student_id) REFERENCES students (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT FK_students_courses_course_id FOREIGN KEY (course_id) REFERENCES courses (id) ON UPDATE CASCADE ON DELETE CASCADE
 );

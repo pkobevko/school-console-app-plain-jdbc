@@ -32,7 +32,7 @@ public class Group {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(id, name);
     }
 
     @Override
@@ -44,7 +44,7 @@ public class Group {
         if (getClass() != obj.getClass())
             return false;
         Group other = (Group) obj;
-        return id == other.id;
+        return id == other.id && Objects.equals(name, other.name);
     }
 
     @Override

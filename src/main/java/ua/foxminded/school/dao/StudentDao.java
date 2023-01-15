@@ -5,22 +5,21 @@ import java.util.Map;
 
 import ua.foxminded.school.domain.model.Course;
 import ua.foxminded.school.domain.model.Student;
-import ua.foxminded.school.exception.DaoOperationException;
 
 public interface StudentDao {
-    void saveAll(List<Student> students) throws DaoOperationException;
+    void saveAllBatch(List<Student> students);
 
-    void assignToCourses(Map<Student, List<Course>> studentsCourses) throws DaoOperationException;
+    void assignToCoursesBatch(Map<Student, List<Course>> studentsCourses);
 
-    List<Student> findByCourseName(String courseName) throws DaoOperationException;
+    List<Student> findAllByCourseName(String courseName);
 
-    void save(Student student) throws DaoOperationException;
+    void save(Student student);
 
-    void deleteById(int studentId) throws DaoOperationException;
+    void deleteById(int studentId);
 
-    List<Student> findAll() throws DaoOperationException;
+    List<Student> findAll();
 
-    void assignToCourse(int studentId, int courseId) throws DaoOperationException;
+    void assignToCourse(int studentId, int courseId);
 
-    void deleteFromCourse(int studentId, int courseId) throws DaoOperationException;
+    void deleteFromCourse(int studentId, int courseId);
 }

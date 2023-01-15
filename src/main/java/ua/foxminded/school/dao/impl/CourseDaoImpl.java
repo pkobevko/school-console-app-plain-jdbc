@@ -13,11 +13,10 @@ import javax.sql.DataSource;
 
 import ua.foxminded.school.dao.CourseDao;
 import ua.foxminded.school.domain.model.Course;
-import ua.foxminded.school.domain.model.Student;
 import ua.foxminded.school.exception.DaoOperationException;
 
 public class CourseDaoImpl implements CourseDao {
-    private static final String COURSE_INSERT_SQL = "INSERT INTO courses(name, description) VALUES (?,?);";
+    private static final String INSERT_COURSE_SQL = "INSERT INTO courses(name, description) VALUES (?,?);";
     private static final String SELECT_ALL_COURSES_SQL = "SELECT * FROM courses;";
     private static final String SELECT_ALL_BY_STUDENT_ID_SQL = "SELECT courses.id, courses.name, courses.description "
             + "FROM students_courses INNER JOIN courses ON courses.id = students_courses.course_id "
@@ -30,7 +29,7 @@ public class CourseDaoImpl implements CourseDao {
     }
 
     @Override
-    public void saveAll(List<Course> courses) throws DaoOperationException {
+    public void saveAllBatch(List<Course> courses) {
         Objects.requireNonNull(courses);
         try (Connection connection = dataSource.getConnection()) {
             saveAllCourses(courses, connection);
@@ -40,33 +39,33 @@ public class CourseDaoImpl implements CourseDao {
     }
 
     private void saveAllCourses(List<Course> courses, Connection connection) throws SQLException {
-        PreparedStatement insertStatement = connection.prepareStatement(COURSE_INSERT_SQL);
+        PreparedStatement insertStatement = connection.prepareStatement(INSERT_COURSE_SQL);
         performBatchInsert(insertStatement, courses);
     }
 
     private void performBatchInsert(PreparedStatement insertStatement, List<Course> courses) throws SQLException {
         for (Course course : courses) {
-            fillCourseStatement(course, insertStatement);
+            fillInsertCourseStatement(course, insertStatement);
             insertStatement.addBatch();
         }
         insertStatement.executeBatch();
     }
 
-    private void fillCourseStatement(Course course, PreparedStatement preparedStatement) throws DaoOperationException {
+    private void fillInsertCourseStatement(Course course, PreparedStatement preparedStatement) {
         try {
             preparedStatement.setString(1, course.getName());
             preparedStatement.setString(2, course.getDescription());
         } catch (SQLException e) {
-            throw new DaoOperationException(String.format("Cannot fill statement for course: %s", course), e);
+            throw new DaoOperationException(String.format("Cannot fill insert-statement for course: %s", course), e);
         }
     }
 
     @Override
-    public List<Course> findAll() throws DaoOperationException {
+    public List<Course> findAll() {
         try (Connection connection = dataSource.getConnection()) {
             return findAllCourses(connection);
         } catch (SQLException e) {
-            throw new DaoOperationException("Cannot find courses", e);
+            throw new DaoOperationException("Error finding courses", e);
         }
     }
 
@@ -76,7 +75,7 @@ public class CourseDaoImpl implements CourseDao {
         return collectToList(resultSet);
     }
 
-    private List<Course> collectToList(ResultSet resultSet) throws DaoOperationException {
+    private List<Course> collectToList(ResultSet resultSet) {
         List<Course> courses = new ArrayList<>();
         try {
             while (resultSet.next()) {
@@ -89,15 +88,15 @@ public class CourseDaoImpl implements CourseDao {
         }
     }
 
-    private Course parseRow(ResultSet resultSet) throws DaoOperationException {
+    private Course parseRow(ResultSet resultSet) {
         try {
-            return createFromResultSet(resultSet);
+            return createCourseFromResultSet(resultSet);
         } catch (SQLException e) {
             throw new DaoOperationException("Cannot parse row to create course instance", e);
         }
     }
 
-    private Course createFromResultSet(ResultSet resultSet) throws SQLException {
+    private Course createCourseFromResultSet(ResultSet resultSet) throws SQLException {
         Course course = new Course();
         course.setId(resultSet.getInt("id"));
         course.setName(resultSet.getString("name"));
@@ -106,33 +105,27 @@ public class CourseDaoImpl implements CourseDao {
     }
 
     @Override
-    public List<Course> findAllByStudentId(int studentId) throws DaoOperationException {
+    public List<Course> findAllByStudentId(int studentId) {
         try (Connection connection = dataSource.getConnection()) {
-            PreparedStatement preparedStatement = prepareFindByStudentIdStatement(connection, studentId);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            return collectToList(resultSet);
+            return findAllCoursesByStudentId(connection, studentId);
         } catch (SQLException e) {
-            throw new DaoOperationException(String.format("Cannot find courses by student ID: %d", studentId), e);
+            throw new DaoOperationException(String.format("Error finding courses by student ID: %d", studentId), e);
         }
     }
 
-    private PreparedStatement prepareFindByStudentIdStatement(Connection connection, int studentId)
-            throws DaoOperationException {
+    private List<Course> findAllCoursesByStudentId(Connection connection, int studentId) throws SQLException {
+        PreparedStatement preparedStatement = prepareFindByStudentIdStatement(connection, studentId);
+        ResultSet resultSet = preparedStatement.executeQuery();
+        return collectToList(resultSet);
+    }
+
+    private PreparedStatement prepareFindByStudentIdStatement(Connection connection, int studentId) {
         try {
             PreparedStatement preparedStatement = connection.prepareStatement(SELECT_ALL_BY_STUDENT_ID_SQL);
-            return fillFindByStudentIdStatement(preparedStatement, studentId);
-        } catch (SQLException e) {
-            throw new DaoOperationException("Cannot prepare find by student id statement", e);
-        }
-    }
-
-    private PreparedStatement fillFindByStudentIdStatement(PreparedStatement preparedStatement, int studentId)
-            throws DaoOperationException {
-        try {
             preparedStatement.setInt(1, studentId);
             return preparedStatement;
         } catch (SQLException e) {
-            throw new DaoOperationException(String.format("Cannot fill findByStudentIdStatement for ID: %d", studentId),
+            throw new DaoOperationException(String.format("Cannot prepare find-by-student-ID-statement for ID: %d", studentId),
                     e);
         }
     }

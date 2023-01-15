@@ -1,8 +1,6 @@
 package ua.foxminded.school.exception;
 
-import java.sql.SQLException;
-
-public class DaoOperationException extends SQLException {
+public class DaoOperationException extends RuntimeException {
     private static final long serialVersionUID = -2993241880624730014L;
 
     public DaoOperationException(String message) {

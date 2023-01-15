@@ -15,8 +15,8 @@ import ua.foxminded.school.domain.model.Group;
 import ua.foxminded.school.exception.DaoOperationException;
 
 public class GroupDaoImpl implements GroupDao {
-    private static final String GROUP_INSERT_SQL = "INSERT INTO groups(name) VALUES (?);";
-    private static final String SELECT_BY_STUDENTS_COUNT_SQL = "SELECT groups.id, groups.name "
+    private static final String INSERT_GROUP_SQL = "INSERT INTO groups(name) VALUES (?);";
+    private static final String SELECT_ALL_BY_STUDENTS_COUNT_SQL = "SELECT groups.id, groups.name "
             + "FROM groups INNER JOIN students ON groups.id = students.group_id "
             + "WHERE groups.id != 0 GROUP BY groups.id HAVING COUNT(groups.id) <= ? ORDER BY groups.id;";
 
@@ -27,70 +27,54 @@ public class GroupDaoImpl implements GroupDao {
     }
 
     @Override
-    public void saveAll(List<Group> groups) throws DaoOperationException {
+    public void saveAllBatch(List<Group> groups) {
         Objects.requireNonNull(groups);
         try (Connection connection = dataSource.getConnection()) {
             saveAllGroups(groups, connection);
         } catch (SQLException e) {
-            throw new DaoOperationException("Error saving groups", e);
+            throw new DaoOperationException("Error saving groups using batch", e);
         }
     }
 
     private void saveAllGroups(List<Group> groups, Connection connection) throws SQLException {
-        PreparedStatement insertStatement = connection.prepareStatement(GROUP_INSERT_SQL);
+        PreparedStatement insertStatement = connection.prepareStatement(INSERT_GROUP_SQL);
         performBatchInsert(insertStatement, groups);
     }
 
     private void performBatchInsert(PreparedStatement insertStatement, List<Group> groups) throws SQLException {
         for (Group group : groups) {
-            fillGroupInsertStatement(group, insertStatement);
+            insertStatement.setString(1, group.getName());
             insertStatement.addBatch();
         }
         insertStatement.executeBatch();
     }
 
-    private PreparedStatement fillGroupInsertStatement(Group group, PreparedStatement preparedStatement)
-            throws DaoOperationException {
-        try {
-            preparedStatement.setString(1, group.getName());
-            return preparedStatement;
-        } catch (SQLException e) {
-            throw new DaoOperationException(String.format("Cannot fill insert statement for group: %s", group), e);
-        }
-    }
-
     @Override
-    public List<Group> findAllByStudentsCount(int studentCount) throws DaoOperationException {
+    public List<Group> findAllByStudentsCount(int studentCount) {
         try (Connection connection = dataSource.getConnection()) {
-            PreparedStatement preparedStatement = prepareSelectByStudentsCountStatement(studentCount, connection);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            return collectToList(resultSet);
+            return findAllGroupsByStudentsCount(connection, studentCount);
         } catch (SQLException e) {
-            throw new DaoOperationException("Cannot find groups by students count", e);
+            throw new DaoOperationException("Error finding groups by students count", e);
         }
     }
 
-    private PreparedStatement prepareSelectByStudentsCountStatement(int studentCount, Connection connection)
-            throws DaoOperationException {
-        try {
-            PreparedStatement preparedStatement = connection.prepareStatement(SELECT_BY_STUDENTS_COUNT_SQL);
-            return fillSelectByStudentsCountStatement(preparedStatement, studentCount);
-        } catch (SQLException e) {
-            throw new DaoOperationException("Cannot prepare select by students count statement", e);
-        }
+    private List<Group> findAllGroupsByStudentsCount(Connection connection, int studentCount) throws SQLException {
+        PreparedStatement preparedStatement = prepareSelectByStudentsCountStatement(studentCount, connection);
+        ResultSet resultSet = preparedStatement.executeQuery();
+        return collectToList(resultSet);
     }
 
-    private PreparedStatement fillSelectByStudentsCountStatement(PreparedStatement preparedStatement, int studentCount)
-            throws DaoOperationException {
+    private PreparedStatement prepareSelectByStudentsCountStatement(int studentCount, Connection connection) {
         try {
+            PreparedStatement preparedStatement = connection.prepareStatement(SELECT_ALL_BY_STUDENTS_COUNT_SQL);
             preparedStatement.setInt(1, studentCount);
             return preparedStatement;
         } catch (SQLException e) {
-            throw new DaoOperationException("Cannot fill select by student count statement", e);
+            throw new DaoOperationException("Cannot prepare select-by-students-count-statement", e);
         }
     }
 
-    private List<Group> collectToList(ResultSet resultSet) throws DaoOperationException {
+    private List<Group> collectToList(ResultSet resultSet) {
         List<Group> groupList = new ArrayList<>();
         try {
             while (resultSet.next()) {

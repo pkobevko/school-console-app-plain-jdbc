@@ -24,9 +24,9 @@ public class StudentDaoImpl implements StudentDao {
             + "FROM students_courses INNER JOIN students ON students.id = students_courses.student_id "
             + "INNER JOIN courses ON courses.id = students_courses.course_id WHERE courses.name = ?;";
     private static final String INSERT_STUDENT_WITHOUT_GROUP_SQL = "INSERT INTO students(first_name, last_name) VALUES (?, ?);";
-    private static final String DELETE_BY_ID_SQL = "DELETE FROM students WHERE students.id = ?;";
+    private static final String DELETE_STUDENT_BY_ID_SQL = "DELETE FROM students WHERE students.id = ?;";
     private static final String SELECT_ALL_STUDENTS_SQL = "SELECT * FROM students;";
-    private static final String DELETE_FROM_COURSE_SQL = "DELETE FROM students_courses WHERE student_id = ? AND course_id = ?";
+    private static final String DELETE_STUDENT_FROM_COURSE_SQL = "DELETE FROM students_courses WHERE student_id = ? AND course_id = ?";
 
     private final DataSource dataSource;
 
@@ -35,7 +35,7 @@ public class StudentDaoImpl implements StudentDao {
     }
 
     @Override
-    public void saveAll(List<Student> students) throws DaoOperationException {
+    public void saveAllBatch(List<Student> students) {
         Objects.requireNonNull(students);
         try (Connection connection = dataSource.getConnection()) {
             saveAllStudents(students, connection);
@@ -58,19 +58,18 @@ public class StudentDaoImpl implements StudentDao {
         insertStatement.executeBatch();
     }
 
-    private void fillStudentInsertStatement(Student student, PreparedStatement preparedStatement)
-            throws DaoOperationException {
+    private void fillStudentInsertStatement(Student student, PreparedStatement preparedStatement) {
         try {
             preparedStatement.setInt(1, student.getGroupId());
             preparedStatement.setString(2, student.getFirstName());
             preparedStatement.setString(3, student.getLastName());
         } catch (SQLException e) {
-            throw new DaoOperationException(String.format("Cannot fill insert statement for student: %s", student), e);
+            throw new DaoOperationException(String.format("Cannot fill insert-statement for student: %s", student), e);
         }
     }
 
     @Override
-    public void assignToCourses(Map<Student, List<Course>> studentsCourses) throws DaoOperationException {
+    public void assignToCoursesBatch(Map<Student, List<Course>> studentsCourses) {
         Objects.requireNonNull(studentsCourses);
         try (Connection connection = dataSource.getConnection()) {
             assignStudentsToCourses(studentsCourses, connection);
@@ -100,33 +99,43 @@ public class StudentDaoImpl implements StudentDao {
     }
 
     private PreparedStatement fillStudentsCoursesInsertStatement(int studentId, int courseId,
-            PreparedStatement assignStatement) throws DaoOperationException {
+            PreparedStatement assignStatement) {
         try {
             assignStatement.setInt(1, studentId);
             assignStatement.setInt(2, courseId);
             return assignStatement;
         } catch (SQLException e) {
             throw new DaoOperationException(
-                    String.format("Cannot fill assign statement for student with ID: %d to course with ID: %d",
+                    String.format("Cannot fill assign-statement for student with ID: %d to course with ID: %d",
                             studentId, courseId),
                     e);
         }
     }
 
     @Override
-    public List<Student> findByCourseName(String courseName) throws DaoOperationException {
+    public List<Student> findAllByCourseName(String courseName) {
         Objects.requireNonNull(courseName);
         try (Connection connection = dataSource.getConnection()) {
-            return findStudentsByCourseName(courseName, connection);
+            return findAllStudentsByCourseName(courseName, connection);
         } catch (SQLException e) {
-            throw new DaoOperationException(String.format("Cannot find students by course name: %s", courseName), e);
+            throw new DaoOperationException(String.format("Error finding students by course name: %s", courseName), e);
         }
     }
 
-    private List<Student> findStudentsByCourseName(String courseName, Connection connection) throws SQLException {
+    private List<Student> findAllStudentsByCourseName(String courseName, Connection connection) throws SQLException {
         PreparedStatement preparedStatement = prepareFindByCourseNameStatement(connection, courseName);
         ResultSet resultSet = preparedStatement.executeQuery();
         return collectToList(resultSet);
+    }
+
+    private PreparedStatement prepareFindByCourseNameStatement(Connection connection, String courseName) {
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(SELECT_STUDENTS_BY_COURSE_NAME_SQL);
+            preparedStatement.setString(1, courseName);
+            return preparedStatement;
+        } catch (SQLException e) {
+            throw new DaoOperationException("Cannot prepare find-by-course-name-statement", e);
+        }
     }
 
     private List<Student> collectToList(ResultSet resultSet) throws DaoOperationException {
@@ -159,28 +168,8 @@ public class StudentDaoImpl implements StudentDao {
         return student;
     }
 
-    private PreparedStatement prepareFindByCourseNameStatement(Connection connection, String courseName)
-            throws DaoOperationException {
-        try {
-            PreparedStatement preparedStatement = connection.prepareStatement(SELECT_STUDENTS_BY_COURSE_NAME_SQL);
-            return fillFindByCourseNameStatement(preparedStatement, courseName);
-        } catch (SQLException e) {
-            throw new DaoOperationException("Cannot prepare find by course name statement", e);
-        }
-    }
-
-    private PreparedStatement fillFindByCourseNameStatement(PreparedStatement preparedStatement, String courseName)
-            throws DaoOperationException {
-        try {
-            preparedStatement.setString(1, courseName);
-            return preparedStatement;
-        } catch (SQLException e) {
-            throw new DaoOperationException("Cannot fill find by course name statement", e);
-        }
-    }
-
     @Override
-    public void save(Student student) throws DaoOperationException {
+    public void save(Student student) {
         Objects.requireNonNull(student);
         try (Connection connection = dataSource.getConnection()) {
             saveStudent(student, connection);
@@ -194,6 +183,26 @@ public class StudentDaoImpl implements StudentDao {
         executeUpdate(insertStatement, "Student was not created");
         int id = fetchGeneratedId(insertStatement);
         student.setId(id);
+    }
+
+    private PreparedStatement prepareInsertStatement(Connection connection, Student student) {
+        try {
+            PreparedStatement insertStatement = connection.prepareStatement(INSERT_STUDENT_WITHOUT_GROUP_SQL,
+                    PreparedStatement.RETURN_GENERATED_KEYS);
+            return fillInsertStatementWithStudentData(insertStatement, student);
+        } catch (SQLException e) {
+            throw new DaoOperationException(String.format("Cannot prepare statement to insert student: %s", student), e);
+        }
+    }
+
+    private PreparedStatement fillInsertStatementWithStudentData(PreparedStatement insertStatement, Student student) {
+        try {
+            insertStatement.setString(1, student.getFirstName());
+            insertStatement.setString(2, student.getLastName());
+            return insertStatement;
+        } catch (SQLException e) {
+            throw new DaoOperationException(String.format("Cannot fill insert-statement for student: %s", student), e);
+        }
     }
 
     private int fetchGeneratedId(PreparedStatement insertStatement) throws SQLException {
@@ -212,77 +221,37 @@ public class StudentDaoImpl implements StudentDao {
         }
     }
 
-    private PreparedStatement prepareInsertStatement(Connection connection, Student student)
-            throws DaoOperationException {
-        try {
-            PreparedStatement insertStatement = connection.prepareStatement(INSERT_STUDENT_WITHOUT_GROUP_SQL,
-                    PreparedStatement.RETURN_GENERATED_KEYS);
-            return fillInsertStatementWithStudentData(insertStatement, student);
-        } catch (SQLException e) {
-            throw new DaoOperationException(String.format("Cannot prepare statement to insert student: %s", student),
-                    e);
-        }
-    }
-
-    private PreparedStatement fillInsertStatementWithStudentData(PreparedStatement insertStatement, Student student)
-            throws DaoOperationException {
-        try {
-            insertStatement.setString(1, student.getFirstName());
-            insertStatement.setString(2, student.getLastName());
-            return insertStatement;
-        } catch (SQLException e) {
-            throw new DaoOperationException(String.format("Cannot fill insert statement for student: %s", student), e);
-        }
-    }
-
     @Override
-    public void deleteById(int studentId) throws DaoOperationException {
+    public void deleteById(int studentId) {
         try (Connection connection = dataSource.getConnection()) {
             deleteStudentById(studentId, connection);
         } catch (SQLException e) {
-            throw new DaoOperationException(String.format("Cannot delete student by ID: %d", studentId), e);
+            throw new DaoOperationException(String.format("Error deleting student with ID: %d", studentId), e);
         }
     }
 
     private void deleteStudentById(int studentId, Connection connection) throws SQLException {
         PreparedStatement deleteByIdStatement = prepareDeleteByIdStatement(studentId, connection);
-        executeDeleteById(deleteByIdStatement, studentId);
+        executeUpdate(deleteByIdStatement, String.format("Does not exist student with given ID: %d", studentId));
     }
 
-    private void executeDeleteById(PreparedStatement deleteByIdStatement, int studentId) throws SQLException {
-        int rowsAffected = deleteByIdStatement.executeUpdate();
-        if (rowsAffected == 0) {
-            throw new DaoOperationException(String.format("Does not exist student with given ID: %d", studentId));
-        }
-    }
-
-    private PreparedStatement prepareDeleteByIdStatement(int studentId, Connection connection)
-            throws DaoOperationException {
+    private PreparedStatement prepareDeleteByIdStatement(int studentId, Connection connection) {
         try {
-            PreparedStatement deleteStatement = connection.prepareStatement(DELETE_BY_ID_SQL,
+            PreparedStatement deleteStatement = connection.prepareStatement(DELETE_STUDENT_BY_ID_SQL,
                     PreparedStatement.RETURN_GENERATED_KEYS);
-            return fillDeleteByIdStatement(deleteStatement, studentId);
-        } catch (SQLException e) {
-            throw new DaoOperationException(String.format("Cannot prepare delete statement for ID: %d", studentId), e);
-        }
-    }
-
-    private PreparedStatement fillDeleteByIdStatement(PreparedStatement deleteStatement, int studentId)
-            throws DaoOperationException {
-        try {
             deleteStatement.setInt(1, studentId);
             return deleteStatement;
         } catch (SQLException e) {
-            throw new DaoOperationException(String.format("Cannot fill delete statement for id: %d", studentId), e);
+            throw new DaoOperationException(String.format("Cannot prepare delete-statement for ID: %d", studentId), e);
         }
     }
 
     @Override
-    public List<Student> findAll() throws DaoOperationException {
+    public List<Student> findAll() {
         try (Connection connection = dataSource.getConnection()) {
             return findAllStudents(connection);
         } catch (SQLException e) {
-            throw new DaoOperationException("Cannot find students", e);
+            throw new DaoOperationException("Error finding students", e);
         }
     }
 
@@ -293,12 +262,12 @@ public class StudentDaoImpl implements StudentDao {
     }
 
     @Override
-    public void assignToCourse(int studentId, int courseId) throws DaoOperationException {
+    public void assignToCourse(int studentId, int courseId) {
         try (Connection connection = dataSource.getConnection()) {
             assignStudentToCourse(studentId, courseId, connection);
         } catch (SQLException e) {
             throw new DaoOperationException(
-                    String.format("Error assigning student with %d ID to course with ID %d", studentId, courseId), e);
+                    String.format("Error assigning student with ID: %d to course with ID: %d", studentId, courseId), e);
         }
     }
 
@@ -307,8 +276,7 @@ public class StudentDaoImpl implements StudentDao {
         executeUpdate(assignStatement, "Cannot assign student to course");
     }
 
-    private PreparedStatement prepareAssignStatement(int studentId, int courseId, Connection connection)
-            throws DaoOperationException {
+    private PreparedStatement prepareAssignStatement(int studentId, int courseId, Connection connection) {
         try {
             PreparedStatement assignStatement = connection.prepareStatement(INSERT_STUDENTS_COURSES_SQL,
                     PreparedStatement.RETURN_GENERATED_KEYS);
@@ -322,12 +290,13 @@ public class StudentDaoImpl implements StudentDao {
     }
 
     @Override
-    public void deleteFromCourse(int studentId, int courseId) throws DaoOperationException {
+    public void deleteFromCourse(int studentId, int courseId) {
         try (Connection connection = dataSource.getConnection()) {
             deleteStudentFromCourse(studentId, courseId, connection);
         } catch (SQLException e) {
             throw new DaoOperationException(
-                    String.format("Cannot delete student(ID: %d) course(%d)", studentId, courseId), e);
+                    String.format("Error deleting student with ID: %d from course with ID: %d", studentId, courseId),
+                    e);
         }
 
     }
@@ -335,38 +304,28 @@ public class StudentDaoImpl implements StudentDao {
     private void deleteStudentFromCourse(int studentId, int courseId, Connection connection) throws SQLException {
         PreparedStatement deleteFromCourseStatement = prepareDeleteStudentFromCourseStatement(studentId, courseId,
                 connection);
-        executeDeleteFromCourse(deleteFromCourseStatement, studentId, courseId);
+        executeUpdate(deleteFromCourseStatement,
+                String.format("Student with ID: %d was not deleted from course with ID: %d", studentId, courseId));
     }
 
     private PreparedStatement prepareDeleteStudentFromCourseStatement(int studentId, int courseId,
-            Connection connection) throws DaoOperationException {
+            Connection connection) {
         try {
-            PreparedStatement deleteFromCourseStatement = connection.prepareStatement(DELETE_FROM_COURSE_SQL,
+            PreparedStatement deleteFromCourseStatement = connection.prepareStatement(DELETE_STUDENT_FROM_COURSE_SQL,
                     PreparedStatement.RETURN_GENERATED_KEYS);
             return fillDeleteFromCourseStatement(deleteFromCourseStatement, studentId, courseId);
         } catch (SQLException e) {
-            throw new DaoOperationException(
-                    String.format("Cannot prepare deleteFromCourseStatement for ID: %d", studentId), e);
+            throw new DaoOperationException(String.format("Cannot prepare delete-from-course-statement for ID: %d", studentId), e);
         }
     }
-
-    private void executeDeleteFromCourse(PreparedStatement deleteFromCourseStatement, int studentId, int courseId)
-            throws SQLException {
-        int rowsAffected = deleteFromCourseStatement.executeUpdate();
-        if (rowsAffected == 0) {
-            throw new DaoOperationException("Not deleted. Check student or course id");
-        }
-    }
-
     private PreparedStatement fillDeleteFromCourseStatement(PreparedStatement deleteFromCourseStatement, int studentId,
-            int courseId) throws DaoOperationException {
+            int courseId) {
         try {
             deleteFromCourseStatement.setInt(1, studentId);
             deleteFromCourseStatement.setInt(2, courseId);
             return deleteFromCourseStatement;
         } catch (SQLException e) {
-            throw new DaoOperationException(
-                    String.format("Cannot fill delete from course statement for ID: %d", studentId), e);
+            throw new DaoOperationException(String.format("Cannot fill delete from course statement for ID: %d", studentId), e);
         }
     }
 }

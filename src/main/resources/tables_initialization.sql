@@ -5,13 +5,12 @@ CREATE TABLE groups (
     CONSTRAINT PK_groups PRIMARY KEY (id),
     CONSTRAINT UQ_groups_name UNIQUE (name)
 );
-
 INSERT INTO groups(id, name) VALUES (0, 'DEFAULT GROUP');
 
 DROP TABLE IF EXISTS students CASCADE;
 CREATE TABLE students (
     id SERIAL NOT NULL,
-    group_id INT NOT NULL  DEFAULT (0),
+    group_id INT NOT NULL DEFAULT (0),
     first_name VARCHAR(255) NOT NULL,
     last_name VARCHAR(255) NOT NULL,
     CONSTRAINT PK_students PRIMARY KEY (id),

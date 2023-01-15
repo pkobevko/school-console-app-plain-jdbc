@@ -41,23 +41,23 @@ public class JdbcUtil {
         return dataSource;
     }
 
-    public static void insertTestDataInDatabase(Data data, DataSource dataSource) throws DaoOperationException {
+    public static void insertTestDataInDatabase(Data data, DataSource dataSource) {
         try {
-            List<Group> groups = data.getGroups();
-            GroupDao groupDao = new GroupDaoImpl(dataSource);
-            groupDao.saveAll(groups);
+        List<Group> groups = data.getGroups();
+        GroupDao groupDao = new GroupDaoImpl(dataSource);
+        groupDao.saveAllBatch(groups);
 
-            List<Course> courses = data.getCourses();
-            CourseDao courseDao = new CourseDaoImpl(dataSource);
-            courseDao.saveAll(courses);
+        List<Course> courses = data.getCourses();
+        CourseDao courseDao = new CourseDaoImpl(dataSource);
+        courseDao.saveAllBatch(courses);
 
-            List<Student> students = data.getStudents(groups);
-            Map<Student, List<Course>> studentsCourses = data.getStudentsCourses(students, courses);
-            StudentDao studentDao = new StudentDaoImpl(dataSource);
-            studentDao.saveAll(students);
-            studentDao.assignToCourses(studentsCourses);
-        } catch (DaoOperationException e) {
-            throw new DaoOperationException("Error inserting data in database:" + e.getMessage(), e);
+        List<Student> students = data.getStudents(groups);
+        Map<Student, List<Course>> studentsCourses = data.getStudentsCourses(students, courses);
+        StudentDao studentDao = new StudentDaoImpl(dataSource);
+        studentDao.saveAllBatch(students);
+        studentDao.assignToCoursesBatch(studentsCourses);
+        } catch (Exception e) {
+            throw new DaoOperationException("Error inserting test data in database", e);
         }
     }
 }

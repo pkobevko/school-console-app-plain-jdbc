@@ -1,6 +1,6 @@
 package ua.foxminded.school.exception;
 
-public class SchoolDbInitializerException extends Exception {
+public class SchoolDbInitializerException extends RuntimeException {
     private static final long serialVersionUID = -3559019717015623357L;
 
     public SchoolDbInitializerException(String message, Throwable cause) {

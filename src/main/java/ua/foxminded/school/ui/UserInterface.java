@@ -14,7 +14,6 @@ import ua.foxminded.school.dao.impl.StudentDaoImpl;
 import ua.foxminded.school.domain.model.Course;
 import ua.foxminded.school.domain.model.Group;
 import ua.foxminded.school.domain.model.Student;
-import ua.foxminded.school.exception.DaoOperationException;
 
 public class UserInterface {
     private final Scanner scanner;
@@ -23,7 +22,7 @@ public class UserInterface {
     private final StudentDao studentDao;
 
     public UserInterface(DataSource dataSource) {
-        scanner = new Scanner(System.in);
+        scanner = new Scanner(System.in);;
         courseDao = new CourseDaoImpl(dataSource);
         groupDao = new GroupDaoImpl(dataSource);
         studentDao = new StudentDaoImpl(dataSource);
@@ -79,8 +78,8 @@ public class UserInterface {
                 return;
             }
             printGroups(groups);
-        } catch (DaoOperationException e) {
-            System.out.println("Cannot find groups: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("ERROR: " + e.getMessage());
         }
     }
 
@@ -89,7 +88,7 @@ public class UserInterface {
         System.out.print("Enter course name >>> ");
         String courseName = scanner.next();
         try {
-            List<Student> students = studentDao.findByCourseName(courseName);
+            List<Student> students = studentDao.findAllByCourseName(courseName);
 
             if (students.isEmpty()) {
                 System.out.println("There are no students attending that course. Check course name and try again");
@@ -98,8 +97,8 @@ public class UserInterface {
 
             System.out.println("Students from course \"" + courseName + "\":");
             printStudents(students);
-        } catch (DaoOperationException e) {
-            System.out.println("Cannot find students: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("ERROR: " + e.getMessage());
         }
     }
 
@@ -118,8 +117,8 @@ public class UserInterface {
             studentDao.save(student);
             System.out.print("Successfully added a new student: ");
             printStudent(student);
-        } catch (DaoOperationException e) {
-            System.out.println("Cannot add new student:\n" + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("ERROR: " + e.getMessage());
         }
     }
 
@@ -131,8 +130,8 @@ public class UserInterface {
             int studentId = getNumber();
             studentDao.deleteById(studentId);
             System.out.println("Student was successfully deleted");
-        } catch (DaoOperationException e) {
-            System.out.println("Cannot delete student by ID\n" + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("ERROR: " + e.getMessage());
         }
     }
 
@@ -155,8 +154,8 @@ public class UserInterface {
             } else {
                 System.out.println("Error, wrong IDs entered. Check IDs and try again");
             }
-        } catch (DaoOperationException e) {
-            System.out.println("Cannot add student to course\n" + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("ERROR: " + e.getMessage());
         }
     }
 
@@ -180,8 +179,8 @@ public class UserInterface {
             } else {
                 System.out.println("Error, wrong IDs entered. Check IDs and try again");
             }
-        } catch (DaoOperationException e) {
-            System.out.println("Cannot remove student from course\n" + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("ERROR: " + e.getMessage());
         }
     }
 
@@ -192,13 +191,15 @@ public class UserInterface {
     }
 
     private int getNumber() {
+        boolean numberIsIncorrect = true;
         int number = 0;
-        while (number == 0) {
+        while (numberIsIncorrect) {
             try {
-                number = scanner.nextInt();
+                number = Integer.parseInt(scanner.next());
                 System.out.println("Number entered: " + number);
+                numberIsIncorrect = false;
             } catch (Exception e) {
-                System.out.println("Error! Please enter number!");
+                System.out.print("Error! Please enter number >>> ");
             }
         }
         return number;

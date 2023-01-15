@@ -52,7 +52,7 @@ public class Student {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(firstName, groupId, id, lastName);
     }
 
     @Override
@@ -64,7 +64,8 @@ public class Student {
         if (getClass() != obj.getClass())
             return false;
         Student other = (Student) obj;
-        return id == other.id;
+        return Objects.equals(firstName, other.firstName) && groupId == other.groupId && id == other.id
+                && Objects.equals(lastName, other.lastName);
     }
 
     @Override

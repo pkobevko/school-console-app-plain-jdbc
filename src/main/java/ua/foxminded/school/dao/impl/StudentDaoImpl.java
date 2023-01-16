@@ -265,7 +265,7 @@ public class StudentDaoImpl implements StudentDao {
 
     private void assignStudentToCourse(int studentId, int courseId, Connection connection) throws SQLException {
         PreparedStatement assignStatement = prepareAssignStatement(studentId, courseId, connection);
-        executeUpdate(assignStatement, "Cannot assign student to course");
+        executeUpdate(assignStatement, String.format("Cannot assign student with ID: %d to course with ID: %d", studentId, courseId));
     }
 
     private PreparedStatement prepareAssignStatement(int studentId, int courseId, Connection connection) {

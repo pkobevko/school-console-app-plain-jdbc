@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -17,8 +18,9 @@ import ua.foxminded.school.exception.DaoOperationException;
 public class GroupDaoImpl implements GroupDao {
     private static final String INSERT_GROUP_SQL = "INSERT INTO groups(name) VALUES (?);";
     private static final String SELECT_ALL_BY_STUDENTS_COUNT_SQL = "SELECT groups.id, groups.name "
-            + "FROM groups INNER JOIN students ON groups.id = students.group_id "
-            + "WHERE groups.id != 0 GROUP BY groups.id HAVING COUNT(groups.id) <= ? ORDER BY groups.id;";
+            + "FROM groups LEFT JOIN students ON groups.id = students.group_id "
+            + "WHERE groups.id != 0 GROUP BY groups.id HAVING COUNT(students.group_id) <= ? ORDER BY groups.id;";
+    private static final String SELECT_ALL_GROUPS_SQL = "SELECT * FROM groups WHERE groups.id != 0;";
 
     private final DataSource dataSource;
 
@@ -50,7 +52,7 @@ public class GroupDaoImpl implements GroupDao {
     }
 
     @Override
-    public List<Group> findAllByStudentsCount(int studentCount) {
+    public List<Group> findAllByEqualOrLessStudentsCount(int studentCount) {
         try (Connection connection = dataSource.getConnection()) {
             return findAllGroupsByStudentsCount(connection, studentCount);
         } catch (SQLException e) {
@@ -89,16 +91,31 @@ public class GroupDaoImpl implements GroupDao {
 
     private Group parseRow(ResultSet resultSet) throws DaoOperationException {
         try {
-            return createFromResultSet(resultSet);
+            return createGroupFromResultSet(resultSet);
         } catch (SQLException e) {
             throw new DaoOperationException("Cannot parse row to create group instance", e);
         }
     }
 
-    private Group createFromResultSet(ResultSet resultSet) throws SQLException {
+    private Group createGroupFromResultSet(ResultSet resultSet) throws SQLException {
         Group group = new Group();
         group.setId(resultSet.getInt("id"));
         group.setName(resultSet.getString("name"));
         return group;
+    }
+
+    @Override
+    public List<Group> findAll() {
+        try (Connection connection = dataSource.getConnection()) {
+            return findAllGroups(connection);
+        } catch (SQLException e) {
+            throw new DaoOperationException("Error finding groups", e);
+        }
+    }
+
+    private List<Group> findAllGroups(Connection connection) throws SQLException {
+        Statement statement = connection.createStatement();
+        ResultSet resultSet = statement.executeQuery(SELECT_ALL_GROUPS_SQL);
+        return collectToList(resultSet);
     }
 }

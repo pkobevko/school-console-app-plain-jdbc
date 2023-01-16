@@ -125,8 +125,8 @@ public class CourseDaoImpl implements CourseDao {
             preparedStatement.setInt(1, studentId);
             return preparedStatement;
         } catch (SQLException e) {
-            throw new DaoOperationException(String.format("Cannot prepare find-by-student-ID-statement for ID: %d", studentId),
-                    e);
+            throw new DaoOperationException(
+                    String.format("Cannot prepare find-by-student-ID-statement for ID: %d", studentId), e);
         }
     }
 }

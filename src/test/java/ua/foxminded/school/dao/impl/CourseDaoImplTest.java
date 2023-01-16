@@ -8,7 +8,9 @@ import java.util.List;
 
 import javax.sql.DataSource;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -29,9 +31,13 @@ class CourseDaoImplTest {
     private static DataSource originalDataSource;
     private static DataSource spyDataSource;
 
+    @BeforeAll
+    static void setup() {
+        originalDataSource = JdbcUtil.createDefaultInMemoryH2DataSource();
+    }
+
     @BeforeEach
     void init() {
-        originalDataSource = JdbcUtil.createDefaultInMemoryH2DataSource();
         spyDataSource = Mockito.spy(originalDataSource);
         courseDao = new CourseDaoImpl(spyDataSource);
         createTables(originalDataSource);
@@ -57,8 +63,8 @@ class CourseDaoImplTest {
     }
 
     @Test
-    void saveAllBatch_shouldSaveAllStudents_whenExample1() {
-        List<Course> expected = List.of(new Course(1, "Test1", "Test1"), new Course(2, "Test2", "Test2"));
+    void saveAllBatch_shouldSaveAllCourses_whenExample1() {
+        List<Course> expected = List.of(new Course(1, "Name1", "Descr1"), new Course(2, "Name2", "Descr2"));
         courseDao.saveAllBatch(expected);
         List<Course> actual = courseDao.findAll();
         Assertions.assertEquals(actual, expected);
@@ -78,7 +84,7 @@ class CourseDaoImplTest {
 
     @Test
     void findAll_shouldReturnCorrectListWithCourses_whenExample1() {
-        List<Course> expected = List.of(new Course(1, "Test1", "Test1"), new Course(2, "Test2", "Test2"));
+        List<Course> expected = List.of(new Course(1, "Name1", "Descr1"), new Course(2, "Name2", "Descr2"));
         courseDao.saveAllBatch(expected);
         List<Course> actual = courseDao.findAll();
         Assertions.assertEquals(actual, expected);

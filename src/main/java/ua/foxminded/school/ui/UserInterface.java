@@ -72,7 +72,7 @@ public class UserInterface {
         System.out.print("Enter students count >>> ");
         int studentCount = getNumber();
         try {
-            List<Group> groups = groupDao.findAllByStudentsCount(studentCount);
+            List<Group> groups = groupDao.findAllByEqualOrLessStudentsCount(studentCount);
             if (groups.isEmpty()) {
                 System.out.println("There are no such groups");
                 return;
@@ -168,6 +168,10 @@ public class UserInterface {
             int studentId = getNumber();
 
             List<Course> studentCourses = courseDao.findAllByStudentId(studentId);
+            if (studentCourses.isEmpty()) {
+                System.out.println("Current student does not have courses");
+                return;
+            }
             printCourses(studentCourses);
 
             System.out.print("Enter course ID >>> ");

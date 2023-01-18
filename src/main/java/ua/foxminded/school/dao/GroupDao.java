@@ -5,9 +5,9 @@ import java.util.List;
 import ua.foxminded.school.domain.model.Group;
 
 public interface GroupDao {
-    void saveAllBatch(List<Group> groups);
+    boolean saveAllBatch(List<Group> groups);
 
-    List<Group> findAllByEqualOrLessStudentsCount(int studentCount);
+    List<Group> findAllByEqualOrLessStudentsCount(int studentsCount);
 
     List<Group> findAll();
 }

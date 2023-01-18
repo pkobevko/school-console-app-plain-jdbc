@@ -1,6 +1,7 @@
 package ua.foxminded.school.ui;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Scanner;
 
 import javax.sql.DataSource;
@@ -22,7 +23,8 @@ public class UserInterface {
     private final StudentDao studentDao;
 
     public UserInterface(DataSource dataSource) {
-        scanner = new Scanner(System.in);;
+        scanner = new Scanner(System.in);
+        ;
         courseDao = new CourseDaoImpl(dataSource);
         groupDao = new GroupDaoImpl(dataSource);
         studentDao = new StudentDaoImpl(dataSource);
@@ -35,7 +37,7 @@ public class UserInterface {
             String input = scanner.next();
             System.out.println();
             if (input.equals("1")) {
-                findGroups();
+                findGroupsByEqualOrLessStudentsCount();
             } else if (input.equals("2")) {
                 findStudentsByCourseName();
             } else if (input.equals("3")) {
@@ -67,39 +69,29 @@ public class UserInterface {
         System.out.print("Enter menu-letter >>> ");
     }
 
-    private void findGroups() {
+    private void findGroupsByEqualOrLessStudentsCount() {
         System.out.println("Find groups by max. students count: ");
         System.out.print("Enter students count >>> ");
         int studentCount = getNumber();
-        try {
-            List<Group> groups = groupDao.findAllByEqualOrLessStudentsCount(studentCount);
-            if (groups.isEmpty()) {
-                System.out.println("There are no such groups");
-                return;
-            }
-            printGroups(groups);
-        } catch (Exception e) {
-            System.out.println("ERROR: " + e.getMessage());
-        }
+
+        System.out.println("List of groups:");
+        List<Group> groups = groupDao.findAllByEqualOrLessStudentsCount(studentCount);
+        printGroups(groups);
     }
 
     private void findStudentsByCourseName() {
         System.out.println("Find students by course name:");
         System.out.print("Enter course name >>> ");
         String courseName = scanner.next();
-        try {
-            List<Student> students = studentDao.findAllByCourseName(courseName);
 
-            if (students.isEmpty()) {
-                System.out.println("There are no students attending that course. Check course name and try again");
-                return;
-            }
-
-            System.out.println("Students from course \"" + courseName + "\":");
+        Optional<Course> courseOpt = courseDao.findByName(courseName);
+        courseOpt.ifPresentOrElse(course -> {
+            System.out.println("Students from course \"" + course.getName() + "\":");
+            List<Student> students = studentDao.findAllByCourseName(course.getName());
             printStudents(students);
-        } catch (Exception e) {
-            System.out.println("ERROR: " + e.getMessage());
-        }
+        }, () -> {
+            System.out.println("Course with given name doesnt exist. Check course name and try again");
+        });
     }
 
     private void addNewStudent() {
@@ -113,85 +105,63 @@ public class UserInterface {
         student.setFirstName(firstName);
         student.setLastName(lastName);
 
-        try {
-            studentDao.save(student);
+        if (studentDao.save(student)) {
             System.out.print("Successfully added a new student: ");
             printStudent(student);
-        } catch (Exception e) {
-            System.out.println("ERROR: " + e.getMessage());
+        } else {
+            System.out.println("Student was not saved. Please, try again");
         }
     }
 
     private void deleteStudentById() {
         System.out.println("Delete student by ID:");
-        try {
-            printStudents(studentDao.findAll());
-            System.out.print("Enter student ID: ");
-            int studentId = getNumber();
-            studentDao.deleteById(studentId);
+        printStudents(studentDao.findAll());
+        System.out.print("Enter student ID: ");
+        int studentId = getNumber();
+        if (studentDao.deleteById(studentId)) {
             System.out.println("Student was successfully deleted");
-        } catch (Exception e) {
-            System.out.println("ERROR: " + e.getMessage());
+        } else {
+            System.out.println("Student was not deleted. Check student ID and try again");
         }
     }
 
     private void addStudentToCourse() {
         System.out.println("Add student to course:");
-        try {
-            List<Student> students = studentDao.findAll();
-            printStudents(students);
-            System.out.print("Enter student ID >>> ");
-            int studentId = getNumber();
+        List<Student> students = studentDao.findAll();
+        printStudents(students);
+        System.out.print("Enter student ID >>> ");
+        int studentId = getNumber();
 
-            List<Course> courses = courseDao.findAll();
-            printCourses(courses);
-            System.out.print("Enter course ID >>> ");
-            int courseId = getNumber();
+        List<Course> courses = courseDao.findAll();
+        printCourses(courses);
+        System.out.print("Enter course ID >>> ");
+        int courseId = getNumber();
 
-            if (checkIfIdsIsCorrect(studentId, students, courseId, courses)) {
-                studentDao.assignToCourse(studentId, courseId);
-                System.out.println("Student added to course successfully");
-            } else {
-                System.out.println("Error, wrong IDs entered. Check IDs and try again");
-            }
-        } catch (Exception e) {
-            System.out.println("ERROR: " + e.getMessage());
+        if (studentDao.assignToCourse(studentId, courseId)) {
+            System.out.println("Student added to course successfully");
+        } else {
+            System.out.println("Student was not added to course. Check IDs and try again");
         }
     }
 
     private void removeStudentCourse() {
         System.out.println("Remove student course:");
-        try {
-            List<Student> students = studentDao.findAll();
-            printStudents(students);
-            System.out.print("Enter student ID >>> ");
-            int studentId = getNumber();
+        List<Student> students = studentDao.findAll();
+        printStudents(students);
+        System.out.print("Enter student ID >>> ");
+        int studentId = getNumber();
 
-            List<Course> studentCourses = courseDao.findAllByStudentId(studentId);
-            if (studentCourses.isEmpty()) {
-                System.out.println("Current student does not have courses");
-                return;
-            }
-            printCourses(studentCourses);
+        List<Course> studentCourses = courseDao.findAllByStudentId(studentId);
+        printCourses(studentCourses);
 
-            System.out.print("Enter course ID >>> ");
-            int courseId = getNumber();
+        System.out.print("Enter course ID >>> ");
+        int courseId = getNumber();
 
-            if (checkIfIdsIsCorrect(studentId, students, courseId, studentCourses)) {
-                studentDao.deleteFromCourse(studentId, courseId);
-                System.out.println("Student successfully deleted from course");
-            } else {
-                System.out.println("Error, wrong IDs entered. Check IDs and try again");
-            }
-        } catch (Exception e) {
-            System.out.println("ERROR: " + e.getMessage());
+        if (studentDao.deleteFromCourse(studentId, courseId)) {
+            System.out.println("Student successfully deleted from course");
+        } else {
+            System.out.println("Student was not deleted from course. Check IDs and try again");
         }
-    }
-
-    private boolean checkIfIdsIsCorrect(int studentId, List<Student> students, int courseId, List<Course> courses) {
-        List<Integer> studentsIds = students.stream().map(Student::getId).toList();
-        List<Integer> coursesIds = courses.stream().map(Course::getId).toList();
-        return studentsIds.contains(studentId) && coursesIds.contains(courseId);
     }
 
     private int getNumber() {
@@ -210,7 +180,6 @@ public class UserInterface {
     }
 
     private void printGroups(List<Group> groups) {
-        System.out.println("List of groups:");
         for (Group group : groups) {
             printGroup(group);
         }
@@ -221,7 +190,6 @@ public class UserInterface {
     }
 
     private void printStudents(List<Student> students) {
-        System.out.println("List of students:");
         for (Student student : students) {
             printStudent(student);
         }
@@ -237,7 +205,6 @@ public class UserInterface {
     }
 
     private void printCourses(List<Course> courses) {
-        System.out.println("List of groups:");
         for (Course course : courses) {
             printCourse(course);
         }

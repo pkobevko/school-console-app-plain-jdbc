@@ -7,19 +7,19 @@ import ua.foxminded.school.domain.model.Course;
 import ua.foxminded.school.domain.model.Student;
 
 public interface StudentDao {
-    void saveAllBatch(List<Student> students);
+    boolean saveAllBatch(List<Student> students);
 
-    void assignToCoursesBatch(Map<Student, List<Course>> studentsCourses);
+    boolean assignToCoursesBatch(Map<Student, List<Course>> studentsCourses);
 
     List<Student> findAllByCourseName(String courseName);
 
-    void save(Student student);
+    boolean save(Student student);
 
-    void deleteById(int studentId);
+    boolean deleteById(int studentId);
 
     List<Student> findAll();
 
-    void assignToCourse(int studentId, int courseId);
+    boolean assignToCourse(int studentId, int courseId);
 
-    void deleteFromCourse(int studentId, int courseId);
+    boolean deleteFromCourse(int studentId, int courseId);
 }

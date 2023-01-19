@@ -121,6 +121,7 @@ public class CourseDaoImpl implements CourseDao {
 
     @Override
     public Optional<Course> findByName(String courseName) {
+        Objects.requireNonNull(courseName);
         try (Connection connection = dataSource.getConnection()) {
             return findCourseByName(courseName, connection);
         } catch (SQLException e) {

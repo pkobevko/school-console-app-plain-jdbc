@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import javax.sql.DataSource;
 
@@ -18,7 +19,6 @@ import ua.foxminded.school.dao.CourseDao;
 import ua.foxminded.school.dao.StudentDao;
 import ua.foxminded.school.domain.model.Course;
 import ua.foxminded.school.domain.model.Student;
-import ua.foxminded.school.exception.DaoOperationException;
 import ua.foxminded.school.util.FileReader;
 import ua.foxminded.school.util.JdbcUtil;
 
@@ -50,35 +50,31 @@ class CourseDaoImplTest {
     }
 
     @Test
-    void saveAllBatch_shouldThrowDaoOperationException_whenDBError() throws SQLException {
+    void saveAllBatch_shouldReturnFalse_whenDBError() throws SQLException {
         Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            courseDao.saveAllBatch(Collections.emptyList());
-        });
-
-        String expectedMessage = "Error saving courses";
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+        Assertions.assertFalse(courseDao.saveAllBatch(Collections.emptyList()));
     }
 
     @Test
-    void saveAllBatch_shouldSaveAllCourses_whenExample1() {
+    void saveAllBatch_shouldSaveAllCoursesAndReturnTrue_whenExample1() {
         List<Course> expected = List.of(new Course(1, "Name1", "Descr1"), new Course(2, "Name2", "Descr2"));
-        courseDao.saveAllBatch(expected);
+        boolean coursesWereSaved = courseDao.saveAllBatch(expected);
         List<Course> actual = courseDao.findAll();
+        Assertions.assertTrue(coursesWereSaved);
         Assertions.assertEquals(actual, expected);
     }
 
     @Test
-    void findAll_shouldThrowDaoOperationException_whenDBError() throws SQLException {
+    void findAll_shouldReturnEmptyList_whenDBError() throws SQLException {
         Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            courseDao.findAll();
-        });
+        List<Course> actual = courseDao.findAll();
+        Assertions.assertTrue(actual.isEmpty());
+    }
 
-        String expectedMessage = "Error finding courses";
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+    @Test
+    void findAll_shouldReturnEmptyList_whenThereAreNoCourses() {
+        List<Course> actual = courseDao.findAll();
+        Assertions.assertTrue(actual.isEmpty());
     }
 
     @Test
@@ -90,15 +86,16 @@ class CourseDaoImplTest {
     }
 
     @Test
-    void findAllByStudentId_shouldThrowDaoOperationException_whenDBError() throws SQLException {
+    void findAllByStudentId_shouldReturnEmptyList_whenDBError() throws SQLException {
         Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            courseDao.findAllByStudentId(TEST_STUDENT_ID);
-        });
+        List<Course> actual = courseDao.findAllByStudentId(TEST_STUDENT_ID);
+        Assertions.assertTrue(actual.isEmpty());
+    }
 
-        String expectedMessage = "Error finding courses by student ID: 1";
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+    @Test
+    void findAllByStudentId_shouldReturnEmptyList_whenThereAreNoCourses() {
+        List<Course> actual = courseDao.findAllByStudentId(TEST_STUDENT_ID);
+        Assertions.assertTrue(actual.isEmpty());
     }
 
     @Test
@@ -113,6 +110,36 @@ class CourseDaoImplTest {
         studentDao.assignToCourse(student.getId(), course.getId());
 
         List<Course> actual = courseDao.findAllByStudentId(student.getId());
+        Assertions.assertEquals(expected, actual);
+    }
+
+    @Test
+    void findByName_shouldThrowNullPointerException_whenPassingNull() {
+        Assertions.assertThrows(NullPointerException.class, () -> {
+            courseDao.findByName(null);
+        });
+    }
+
+    @Test
+    void findByName_shouldReturnEmptyOptional_whenDBError() throws SQLException {
+        Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
+        Optional<Course> actual = courseDao.findByName("courseName");
+        Assertions.assertTrue(actual.isEmpty());
+    }
+
+    @Test
+    void findByName_shouldReturnEmptyOptional_whenThereIsNoCourseWithGivenName() {
+        Optional<Course> actual = courseDao.findByName("courseName");
+        Assertions.assertTrue(actual.isEmpty());
+    }
+
+    @Test
+    void findByName_shouldReturnOptionalWithCorrectCourse_whenExample1() {
+        Course expected = new Course(1, "name", "descr");
+        courseDao.saveAllBatch(List.of(expected));
+
+        Optional<Course> courseOpt = courseDao.findByName("name");
+        Course actual = courseOpt.get();
         Assertions.assertEquals(expected, actual);
     }
 

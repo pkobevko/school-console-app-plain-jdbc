@@ -20,7 +20,6 @@ import ua.foxminded.school.dao.CourseDao;
 import ua.foxminded.school.dao.StudentDao;
 import ua.foxminded.school.domain.model.Course;
 import ua.foxminded.school.domain.model.Student;
-import ua.foxminded.school.exception.DaoOperationException;
 import ua.foxminded.school.util.FileReader;
 import ua.foxminded.school.util.JdbcUtil;
 
@@ -51,23 +50,19 @@ class StudentDaoImplTest {
     }
 
     @Test
-    void saveAllBatch_shouldThrowDaoOperationException_whenDBError() throws SQLException {
+    void saveAllBatch_shouldReturnFalse_whenDBError() throws SQLException {
         Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            studentDao.saveAllBatch(Collections.emptyList());
-        });
-
-        String expectedMessage = "Error saving students";
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+        boolean studentsWasSaved = studentDao.saveAllBatch(Collections.emptyList());
+        Assertions.assertFalse(studentsWasSaved);
     }
 
     @Test
-    void saveAllBatch_shouldSaveAllStudents_whenExample1() {
+    void saveAllBatch_shouldSaveAllStudentsAndReturnTrue_whenExample1() {
         List<Student> expected = List.of(new Student(1, 0, "FirstName", "LastName"));
-        studentDao.saveAllBatch(expected);
+        boolean studentsWasSaved = studentDao.saveAllBatch(expected);
         List<Student> actual = studentDao.findAll();
         Assertions.assertEquals(expected, actual);
+        Assertions.assertTrue(studentsWasSaved);
     }
 
     @Test
@@ -78,19 +73,14 @@ class StudentDaoImplTest {
     }
 
     @Test
-    void assignToCoursesBatch_shouldThrowDaoOperationException_whenDBError() throws SQLException {
+    void assignToCoursesBatch_shouldReturnFalse_whenDBError() throws SQLException {
         Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            studentDao.assignToCoursesBatch(Collections.emptyMap());
-        });
-
-        String expectedMessage = "Error assigning students to courses";
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+        boolean studentsWasAssigned = studentDao.assignToCoursesBatch(Collections.emptyMap());
+        Assertions.assertFalse(studentsWasAssigned);
     }
 
     @Test
-    void assignToCoursesBatch_shouldWorkProperly_whenExample1() {
+    void assignToCoursesBatch_shouldAssignStudentsToCoursesAndReturnTrue_whenExample1() {
         Student student = new Student(1, 0, "FirstName", "LastName");
         studentDao.save(student);
         Course course = new Course(1, "Name", "Descr");
@@ -100,10 +90,11 @@ class StudentDaoImplTest {
 
         Map<Student, List<Course>> studentCourses = new HashMap<>();
         studentCourses.put(student, expected);
-        studentDao.assignToCoursesBatch(studentCourses);
+        boolean studentsWasAssigned = studentDao.assignToCoursesBatch(studentCourses);
 
         List<Course> actual = courseDao.findAllByStudentId(student.getId());
         Assertions.assertEquals(expected, actual);
+        Assertions.assertTrue(studentsWasAssigned);
     }
 
     @Test
@@ -114,19 +105,14 @@ class StudentDaoImplTest {
     }
 
     @Test
-    void findAllByCourseName_shouldThrowDaoOperationException_whenDBError() throws SQLException {
+    void findAllByCourseName_shouldReturnEmptyList_whenDBError() throws SQLException {
         Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            studentDao.findAllByCourseName("CourseName");
-        });
-
-        String expectedMessage = "Error finding students by course name: CourseName";
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+        List<Student> actual = studentDao.findAllByCourseName("CourseName");
+        Assertions.assertTrue(actual.isEmpty());
     }
 
     @Test
-    void findAllByCourseName_shouldWorkProperly_whenExample1() {
+    void findAllByCourseName_shouldReturnCorrectList_whenExample1() {
         Student student = new Student(1, 0, "FirstName", "LastName");
         studentDao.save(student);
         Course course = new Course(1, "Name", "Descr");
@@ -143,7 +129,6 @@ class StudentDaoImplTest {
     void findAllByCourseName_shouldReturnEmptyList_whenCourseWithGivenNameDoesntExist() {
         List<Student> expected = Collections.emptyList();
         List<Student> actual = studentDao.findAllByCourseName("CourseName");
-
         Assertions.assertEquals(expected, actual);
     }
 
@@ -155,74 +140,56 @@ class StudentDaoImplTest {
     }
 
     @Test
-    void save_shouldThrowDaoOperationException_whenDBError() throws SQLException {
+    void save_shouldReturnFalse_whenDBError() throws SQLException {
         Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
         Student student = new Student(1, 0, "FirstName", "LastName");
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            studentDao.save(student);
-        });
-
-        String expectedMessage = String.format("Error saving student: %s", student);
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+        boolean studentWasSaved = studentDao.save(student);
+        Assertions.assertFalse(studentWasSaved);
     }
 
     @Test
-    void save_shouldWorkProperly_whenExample1() {
+    void save_shouldSaveStudentAndReturnTrue_whenExample1() {
         Student student = new Student(1, 0, "FirstName", "LastName");
-        studentDao.save(student);
+        boolean studentWasSaved = studentDao.save(student);
 
         List<Student> expected = List.of(student);
         List<Student> actual = studentDao.findAll();
         Assertions.assertEquals(expected, actual);
+        Assertions.assertTrue(studentWasSaved);
     }
 
     @Test
-    void deleteById_shouldThrowDaoOperationException_whenDBError() throws SQLException {
+    void deleteById_shouldReturnFalse_whenDBError() throws SQLException {
         Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
         int studentId = 7;
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            studentDao.deleteById(studentId);
-        });
-
-        String expectedMessage = String.format("Error deleting student with ID: %d", studentId);
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+        boolean studentWasDeleted = studentDao.deleteById(studentId);
+        Assertions.assertFalse(studentWasDeleted);
     }
 
     @Test
-    void deleteById_shouldWorkProperly_whenExample1() {
+    void deleteById_shouldDeleteStudentAndReturnTrue_whenExample1() {
         Student student = new Student(1, 0, "FirstName", "LastName");
         studentDao.save(student);
-        studentDao.deleteById(student.getId());
+        boolean studentWasDeleted = studentDao.deleteById(student.getId());
 
         List<Student> expected = Collections.emptyList();
         List<Student> actual = studentDao.findAll();
         Assertions.assertEquals(expected, actual);
+        Assertions.assertTrue(studentWasDeleted);
     }
 
     @Test
-    void deleteById_shouldThrowDaoOperationException_whenStudentIdDoestExistInDb() {
+    void deleteById_shouldReturnFalse_whenStudentIdDoestExistInDb() {
         int studentId = 777;
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            studentDao.deleteById(studentId);
-        });
-
-        String expectedMessage = String.format("Does not exist student with given ID: %d", studentId);
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+        boolean studentWasDeleted = studentDao.deleteById(studentId);
+        Assertions.assertFalse(studentWasDeleted);
     }
 
     @Test
-    void findAll_shouldThrowDaoOperationException_whenDBError() throws SQLException {
+    void findAll_shouldReturnEmptyList_whenDBError() throws SQLException {
         Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            studentDao.findAll();
-        });
-
-        String expectedMessage = "Error finding students";
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+        List<Student> actual = studentDao.findAll();
+        Assertions.assertTrue(actual.isEmpty());
     }
 
     @Test
@@ -233,23 +200,22 @@ class StudentDaoImplTest {
         Assertions.assertEquals(actual, expected);
     }
 
+    @Test 
+    void findAll_shouldReturnEmptyList_whenThereAreNoStudents() {
+        List<Student> actual = studentDao.findAll();
+        Assertions.assertTrue(actual.isEmpty());
+    }
     @Test
-    void assignToCourse_shouldThrowDaoOperationException_whenDBError() throws SQLException {
+    void assignToCourse_shouldReturnFalse_whenDBError() throws SQLException {
         Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
         int studentId = 777;
         int courseId = 777;
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            studentDao.assignToCourse(studentId, courseId);
-        });
-
-        String expectedMessage = String.format("Error assigning student with ID: %d to course with ID: %d", studentId,
-                courseId);
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+        boolean studentWasAssigned = studentDao.assignToCourse(studentId, courseId);
+        Assertions.assertFalse(studentWasAssigned);
     }
 
     @Test
-    void assignToCourse_shouldWorkProperly_whenExample1() {
+    void assignToCourse_shouldAssignStudentToCourseAndReturnTrue_whenExample1() {
         Student student = new Student(1, 0, "FirstName", "LastName");
         studentDao.save(student);
         Course course = new Course(1, "Name", "Descr");
@@ -257,14 +223,15 @@ class StudentDaoImplTest {
         CourseDao courseDao = new CourseDaoImpl(spyDataSource);
         courseDao.saveAllBatch(expected);
 
-        studentDao.assignToCourse(student.getId(), course.getId());
+        boolean studentWasAssigned = studentDao.assignToCourse(student.getId(), course.getId());
 
         List<Course> actual = courseDao.findAllByStudentId(student.getId());
         Assertions.assertEquals(expected, actual);
+        Assertions.assertTrue(studentWasAssigned);
     }
 
     @Test
-    void assignToCourse_shouldThrowDaoOperationException_whenStudentAlreadyHaveGivenCourse() {
+    void assignToCourse_shouldReturnFalse_whenStudentAlreadyHaveGivenCourse() {
         Student student = new Student(1, 0, "FirstName", "LastName");
         studentDao.save(student);
         Course course = new Course(1, "Name", "Descr");
@@ -273,33 +240,21 @@ class StudentDaoImplTest {
         courseDao.saveAllBatch(expected);
         studentDao.assignToCourse(student.getId(), course.getId());
 
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            studentDao.assignToCourse(student.getId(), course.getId());
-        });
-
-        String expectedMessage = String.format("Error assigning student with ID: %d to course with ID: %d",
-                student.getId(), course.getId());
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+        boolean studentWasAssigned = studentDao.assignToCourse(student.getId(), course.getId());
+        Assertions.assertFalse(studentWasAssigned);
     }
 
     @Test
-    void deleteFromCourse_shouldThrowDaoOperationException_whenDBError() throws SQLException {
+    void deleteFromCourse_shouldReturnFalse_whenDBError() throws SQLException {
         Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
         int studentId = 777;
         int courseId = 777;
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            studentDao.deleteFromCourse(studentId, courseId);
-        });
-
-        String expectedMessage = String.format("Error deleting student with ID: %d from course with ID: %d", studentId,
-                courseId);
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+        boolean studentWasDeletedFromCourse = studentDao.deleteFromCourse(studentId, courseId);
+        Assertions.assertFalse(studentWasDeletedFromCourse);
     }
 
     @Test
-    void deleteFromCourse_shouldWorkProperly_whenExample1() {
+    void deleteFromCourse_shouldDeleteStudentFromCourseAndReturnTrue_whenExample1() {
         Student student = new Student(1, 0, "FirstName", "LastName");
         studentDao.save(student);
         Course course = new Course(1, "Name", "Descr");
@@ -308,27 +263,22 @@ class StudentDaoImplTest {
         courseDao.saveAllBatch(courseList);
         studentDao.assignToCourse(student.getId(), course.getId());
 
-        studentDao.deleteFromCourse(student.getId(), course.getId());
+        boolean studentWasDeletedFromCourse = studentDao.deleteFromCourse(student.getId(), course.getId());
 
         List<Course> expected = Collections.emptyList();
         List<Course> actual = courseDao.findAllByStudentId(student.getId());
         Assertions.assertEquals(expected, actual);
+        Assertions.assertTrue(studentWasDeletedFromCourse);
     }
 
     @Test
-    void deleteFromCourse_shouldThrowDaoOperationException_whenStudentDoesntHaveGivenCourse() {
+    void deleteFromCourse_shouldReturnFalse_whenStudentDoesntHaveGivenCourse() {
         Student student = new Student(1, 0, "FirstName", "LastName");
         studentDao.save(student);
         int courseId = 777;
 
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            studentDao.deleteFromCourse(student.getId(), courseId);
-        });
-
-        String expectedMessage = String.format("Student with ID: %d was not deleted from course with ID: %d",
-                student.getId(), courseId);
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+        boolean studentWasDeletedFromCourse = studentDao.deleteFromCourse(student.getId(), courseId);
+        Assertions.assertFalse(studentWasDeletedFromCourse);
     }
 
     private static void createTables(DataSource dataSource) {

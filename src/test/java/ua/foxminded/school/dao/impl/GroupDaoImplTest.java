@@ -18,7 +18,6 @@ import ua.foxminded.school.dao.GroupDao;
 import ua.foxminded.school.dao.StudentDao;
 import ua.foxminded.school.domain.model.Group;
 import ua.foxminded.school.domain.model.Student;
-import ua.foxminded.school.exception.DaoOperationException;
 import ua.foxminded.school.util.FileReader;
 import ua.foxminded.school.util.JdbcUtil;
 
@@ -50,37 +49,28 @@ class GroupDaoImplTest {
     }
 
     @Test
-    void saveAllBatch_shouldThrowDaoOperationException_whenDBError() throws SQLException {
+    void saveAllBatch_shouldReturnFalse_whenDBError() throws SQLException {
         Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            groupDao.saveAllBatch(Collections.emptyList());
-        });
-
-        String expectedMessage = "Error saving groups using batch";
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+        boolean coursesWasSaved = groupDao.saveAllBatch(Collections.emptyList());
+        Assertions.assertFalse(coursesWasSaved);
     }
 
     @Test
-    void saveAllBatch_shouldSaveAllGroups_whenExample1() {
+    void saveAllBatch_shouldSaveAllGroupsAndReturnTrue_whenExample1() {
         List<Group> expected = List.of(new Group(1, "Name1"));
-        groupDao.saveAllBatch(expected);
+        boolean coursesWasSaved = groupDao.saveAllBatch(expected);
         List<Group> actual = groupDao.findAll();
         Assertions.assertEquals(expected, actual);
+        Assertions.assertTrue(coursesWasSaved);
     }
 
     @Test
-    void findAll_shouldThrowDaoOperationException_whenDBError() throws SQLException {
+    void findAll_shouldReturnEmptyList_whenDBError() throws SQLException {
         Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            groupDao.findAll();
-        });
-
-        String expectedMessage = "Error finding groups";
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
+        List<Group> actual = groupDao.findAll();
+        Assertions.assertTrue(actual.isEmpty());
     }
-    
+
     @Test
     void findAll_shouldReturnCorrectListWithGroups_whenExample1() {
         List<Group> expected = List.of(new Group(1, "Name1"));
@@ -88,29 +78,36 @@ class GroupDaoImplTest {
         List<Group> actual = groupDao.findAll();
         Assertions.assertEquals(actual, expected);
     }
-    
-    @Test
-    void findAllByStudentsCount_shouldThrowDaoOperationException_whenDBError() throws SQLException {
-        Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
-        Exception exception = Assertions.assertThrows(DaoOperationException.class, () -> {
-            groupDao.findAllByEqualOrLessStudentsCount(TEST_STUDENTS_COUNT);
-        });
 
-        String expectedMessage = "Error finding groups by students count";
-        String actualMessage = exception.getMessage();
-        Assertions.assertEquals(actualMessage, expectedMessage);
-    }
-    
     @Test
-    void findAllByStudentsCount_shouldReturnCorrectListWithGroups_whenExample1() {
+    void findAll_shouldReturnEmptyList_whenThereAreNoCourses() {
+        List<Group> actual = groupDao.findAll();
+        Assertions.assertTrue(actual.isEmpty());
+    }
+
+    @Test
+    void findAllByEqualOrLessStudentsCount_shouldReturnEmptyList_whenDBError() throws SQLException {
+        Mockito.doThrow(new SQLException("Mock testing Exception")).when(spyDataSource).getConnection();
+        List<Group> actual = groupDao.findAllByEqualOrLessStudentsCount(TEST_STUDENTS_COUNT);
+        Assertions.assertTrue(actual.isEmpty());
+    }
+
+    @Test
+    void findAllByEqualOrLessStudentsCount_shouldReturnCorrectListWithGroups_whenExample1() {
         List<Group> expected = List.of(new Group(1, "Name1"));
         groupDao.saveAllBatch(expected);
-        
+
         StudentDao studentDao = new StudentDaoImpl(spyDataSource);
         studentDao.save(new Student(1, 1, "FirstName", "LastName"));
-        
+
         List<Group> actual = groupDao.findAllByEqualOrLessStudentsCount(TEST_STUDENTS_COUNT);
         Assertions.assertEquals(expected, actual);
+    }
+
+    @Test
+    void findAllByEqualOrLessStudentsCount_shouldReturnEmptyList_whenThereAreNoCoursesByGivenCount() {
+        List<Group> actual = groupDao.findAllByEqualOrLessStudentsCount(TEST_STUDENTS_COUNT);
+        Assertions.assertTrue(actual.isEmpty());
     }
 
     private static void createTables(DataSource dataSource) {
